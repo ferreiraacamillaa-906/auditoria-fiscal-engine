@@ -1,0 +1,48 @@
+# Ambientes virtuais Python
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Segredos e configuração local
+.env
+.env.*
+!.env.example
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Web / Node
+node_modules/
+npm-debug.log*
+.cache/
+.parcel-cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Arquivos temporários de auditoria (SPED, relatórios e exports)
+*.tmp
+*.temp
+*.log
+tmp/
+temp/
+output/
+sped_input/
+*.sped.txt
+auditoria_*.csv
+auditoria_*.xlsx

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AuditorIA — Dashboard Executivo</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --ink: #1b2430;
+    --muted: #5d6b7c;
+    --line: #dde3ea;
+    --brand: #0f4c81;
+    --alta: #b42318;
+    --media: #b54708;
+    --baixa: #3b6e22;
+    --atual: #8a94a3;
+    --novo: #0f4c81;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: var(--brand); color: #fff; padding: 18px 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 1.25rem; }
+  header small { opacity: .85; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 40px; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 8px 14px; border-radius: 6px; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  header button { border-color: rgba(255,255,255,.5); background: transparent; color: #fff; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .kpi .label { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+  .kpi .value { font-size: 1.8rem; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  section.card { margin-bottom: 20px; }
+  section h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
+  select, input[type=text], input[type=number] { font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.desc { white-space: normal; min-width: 240px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: .75rem; font-weight: 600; border: 1px solid currentColor; }
+  .badge.alta { color: var(--alta); }
+  .badge.media { color: var(--media); }
+  .badge.baixa { color: var(--baixa); }
+  .legend { display: flex; gap: 16px; font-size: .85rem; color: var(--muted); margin-bottom: 8px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 22px; height: 3px; margin-right: 6px; vertical-align: middle; }
+  svg { width: 100%; height: auto; display: block; }
+  .note { color: var(--muted); font-size: .8rem; margin-top: 10px; }
+  .empty { padding: 18px; text-align: center; color: var(--muted); }
+  @media print {
+    body { background: #fff; }
+    header { background: #fff; color: #000; border-bottom: 2px solid #000; padding-left: 0; }
+    .actions, .toolbar { display: none !important; }
+    .card { break-inside: avoid; border-color: #bbb; }
+    main { max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>AuditorIA — Essencial Automação Fiscal</h1>
+    <small id="periodo">Dashboard executivo de auditoria SPED</small>
+  </div>
+  <div class="actions">
+    <button id="btnPrint" type="button">Imprimir / PDF</button>
+  </div>
+</header>
+
+<main>
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2>Inconsistências encontradas</h2>
+    <div class="toolbar">
+      <input type="text" id="busca" placeholder="Buscar por regra, produto ou descrição" aria-label="Buscar">
+      <select id="filtroSev" aria-label="Filtrar por severidade">
+        <option value="">Todas as severidades</option>
+        <option value="alta">Alta</option>
+        <option value="media">Média</option>
+        <option value="baixa">Baixa</option>
+      </select>
+      <button class="primary" id="btnCsv" type="button">Exportar CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Regra</th><th>Severidade</th><th>Tributo</th><th>Registro</th>
+            <th>Produto</th><th>Descrição</th><th class="num">Impacto (R$)</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="note">Dados de exemplo. Substitua o array <code>INCONSISTENCIAS</code> pela consulta à tabela <code>auditoria_sped</code> no Supabase.</div>
+  </section>
+
+  <section class="card">
+    <h2>Comparador da Reforma Tributária (2027–2033)</h2>
+    <div class="toolbar">
+      <label>Faturamento anual (R$)
+        <input type="number" id="fat" value="1000000" min="0" step="10000">
+      </label>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--atual)"></i>Carga atual (ICMS + PIS/Cofins)</span>
+      <span><i style="background:var(--novo)"></i>Carga na transição (CBS + IBS + ICMS residual)</span>
+    </div>
+    <svg id="grafico" viewBox="0 0 800 340" role="img" aria-label="Gráfico de linhas comparando a carga tributária atual e a carga na transição da reforma"></svg>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ano</th><th class="num">Carga atual (R$)</th><th class="num">Transição (R$)</th><th class="num">Diferença (R$)</th></tr></thead>
+        <tbody id="tbodyRef"></tbody>
+      </table>
+    </div>
+    <div class="note">Simulação ilustrativa: alíquotas de referência CBS 8,8% e IBS 17,7%, ICMS 18% e PIS/Cofins 9,25% sobre o faturamento, sem créditos, regimes especiais ou diferenciação por produto. Não substitui parecer tributário.</div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- Dados de exemplo ----------
+  var INCONSISTENCIAS = [
+    { regra: 'R002', sev: 'alta',  tributo: 'ICMS',       registro: 'C170', produto: 'Cabo HDMI 2m',         desc: 'CST 000 incompatível com CFOP 5405 (substituição tributária).', impacto: 18420.50 },
+    { regra: 'R003', sev: 'alta',  tributo: 'ICMS',       registro: 'C170', produto: 'Notebook 14"',         desc: 'Alíquota de 12% informada; esperada 18% para a UF e o NCM.',    impacto: 12875.00 },
+    { regra: 'R001', sev: 'media', tributo: 'ICMS',       registro: '0200', produto: 'Mouse sem fio',        desc: 'NCM do item (85176249) difere do NCM do cadastro (84716053).',  impacto: 3210.80 },
+    { regra: 'R004', sev: 'media', tributo: 'PIS/Cofins', registro: 'C170', produto: 'Teclado mecânico',     desc: 'CST 01 informado para empresa com regime cumulativo.',          impacto: 5640.15 },
+    { regra: 'R004', sev: 'media', tributo: 'PIS/Cofins', registro: 'C170', produto: 'Monitor 24"',          desc: 'CST 49 sem enquadramento na natureza da operação.',             impacto: 2980.00 },
+    { regra: 'R005', sev: 'baixa', tributo: 'ICMS',       registro: '0200', produto: 'Suporte articulado',   desc: 'Produto sem NCM cadastrado.',                                   impacto: 0 },
+    { regra: 'R005', sev: 'baixa', tributo: 'ICMS',       registro: '0200', produto: 'Hub USB 4 portas',     desc: 'NCM não consta na tabela vigente.',                             impacto: 410.00 }
+  ];
+
+  var SEV_LABEL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+
+  // ---------- Utilitários ----------
+  var brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // ---------- KPIs ----------
+  function renderKpis() {
+    var total = INCONSISTENCIAS.length;
+    var altas = INCONSISTENCIAS.filter(function (i) { return i.sev === 'alta'; }).length;
+    var impacto = INCONSISTENCIAS.reduce(function (s, i) { return s + i.impacto; }, 0);
+    var regras = {};
+    INCONSISTENCIAS.forEach(function (i) { regras[i.regra] = 1; });
+    var itens = [
+      ['Inconsistências', total],
+      ['Severidade alta', altas],
+      ['Impacto potencial', brl.format(impacto)],
+      ['Regras acionadas', Object.keys(regras).length]
+    ];
+    $('kpis').innerHTML = itens.map(function (k) {
+      return '<div class="card kpi"><div class="label">' + k[0] + '</div><div class="value">' + k[1] + '</div></div>';
+    }).join('');
+  }
+
+  // ---------- Tabela ----------
+  function filtradas() {
+    var q = $('busca').value.trim().toLowerCase();
+    var sev = $('filtroSev').value;
+    return INCONSISTENCIAS.filter(function (i) {
+      if (sev && i.sev !== sev) return false;
+      if (!q) return true;
+      return (i.regra + ' ' + i.produto + ' ' + i.desc + ' ' + i.tributo).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderTabela() {
+    var rows = filtradas();
+    if (!rows.length) {
+      $('tbody').innerHTML = '<tr><td colspan="7" class="empty">Nenhuma inconsistência para o filtro atual.</td></tr>';
+      return;
+    }
+    $('tbody').innerHTML = rows.map(function (i) {
+      return '<tr><td>' + esc(i.regra) + '</td>' +
+        '<td><span class="badge ' + i.sev + '">' + SEV_LABEL[i.sev] + '</span></td>' +
+        '<td>' + esc(i.tributo) + '</td><td>' + esc(i.registro) + '</td>' +
+        '<td>' + esc(i.produto) + '</td><td class="desc">' + esc(i.desc) + '</td>' +
+        '<td class="num">' + brl.format(i.impacto) + '</td></tr>';
+    }).join('');
+  }
+
+  // ---------- Exportação CSV ----------
+  function csvCell(v) {
+    var s = String(v);
+    // Evita injeção de fórmula ao abrir no Excel/Sheets
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportarCsv() {
+    var head = ['Regra', 'Severidade', 'Tributo', 'Registro', 'Produto', 'Descrição', 'Impacto (R$)'];
+    var linhas = filtradas().map(function (i) {
+      return [i.regra, SEV_LABEL[i.sev], i.tributo, i.registro, i.produto, i.desc,
+              i.impacto.toFixed(2).replace('.', ',')].map(csvCell).join(';');
+    });
+    var csv = '﻿' + [head.map(csvCell).join(';')].concat(linhas).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'inconsistencias_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- Comparador da Reforma ----------
+  var ALIQ = { icms: 0.18, pisCofins: 0.0925, cbs: 0.088, ibs: 0.177 };
+  // Fração do IBS em vigor e fração remanescente do ICMS em cada ano (LC 214/2025)
+  var CRONOGRAMA = [
+    { ano: 2027, ibs: 0.1 / 17.7, icms: 1.0 },
+    { ano: 2028, ibs: 0.1 / 17.7, icms: 1.0 },
+    { ano: 2029, ibs: 0.1, icms: 0.9 },
+    { ano: 2030, ibs: 0.2, icms: 0.8 },
+    { ano: 2031, ibs: 0.3, icms: 0.7 },
+    { ano: 2032, ibs: 0.4, icms: 0.6 },
+    { ano: 2033, ibs: 1.0, icms: 0.0 }
+  ];
+
+  function simular(fat) {
+    var atual = fat * (ALIQ.icms + ALIQ.pisCofins);
+    return CRONOGRAMA.map(function (c) {
+      var nova = fat * (ALIQ.cbs + ALIQ.ibs * c.ibs + ALIQ.icms * c.icms);
+      return { ano: c.ano, atual: atual, nova: nova };
+    });
+  }
+
+  function renderGrafico(dados) {
+    var W = 800, H = 340, m = { t: 20, r: 20, b: 40, l: 80 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var vals = dados.reduce(function (a, d) { return a.concat(d.atual, d.nova); }, []);
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var pad = (max - min) * 0.3 || max * 0.05 || 1;
+    var lo = Math.max(0, min - pad), hi = max + pad;
+    var x = function (i) { return m.l + (iw * i) / (dados.length - 1); };
+    var y = function (v) { return m.t + ih - ((v - lo) / (hi - lo)) * ih; };
+    var out = '';
+    for (var g = 0; g <= 4; g++) {
+      var v = lo + ((hi - lo) * g) / 4, yy = y(v);
+      out += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + yy + '" y2="' + yy + '" stroke="#dde3ea"/>' +
+             '<text x="' + (m.l - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-size="11" fill="#5d6b7c">' +
+             Math.round(v).toLocaleString('pt-BR') + '</text>';
+    }
+    dados.forEach(function (d, i) {
+      out += '<text x="' + x(i) + '" y="' + (H - 14) + '" text-anchor="middle" font-size="12" fill="#5d6b7c">' + d.ano + '</text>';
+    });
+    function linha(key, cor) {
+      var pts = dados.map(function (d, i) { return x(i) + ',' + y(d[key]); }).join(' ');
+      var dots = dados.map(function (d, i) {
+        return '<circle cx="' + x(i) + '" cy="' + y(d[key]) + '" r="4" fill="' + cor + '"><title>' +
+               d.ano + ': ' + brl.format(d[key]) + '</title></circle>';
+      }).join('');
+      return '<polyline points="' + pts + '" fill="none" stroke="' + cor + '" stroke-width="2.5"/>' + dots;
+    }
+    out += linha('atual', '#8a94a3') + linha('nova', '#0f4c81');
+    $('grafico').innerHTML = out;
+  }
+
+  function renderReforma() {
+    var fat = Math.max(0, parseFloat($('fat').value) || 0);
+    var dados = simular(fat);
+    renderGrafico(dados);
+    $('tbodyRef').innerHTML = dados.map(function (d) {
+      var dif = d.nova - d.atual;
+      return '<tr><td>' + d.ano + '</td><td class="num">' + brl.format(d.atual) + '</td><td class="num">' +
+             brl.format(d.nova) + '</td><td class="num">' + (dif > 0 ? '+' : '') + brl.format(dif) + '</td></tr>';
+    }).join('');
+  }
+
+  // ---------- Inicialização ----------
+  $('busca').addEventListener('input', renderTabela);
+  $('filtroSev').addEventListener('change', renderTabela);
+  $('btnCsv').addEventListener('click', exportarCsv);
+  $('btnPrint').addEventListener('click', function () { window.print(); });
+  $('fat').addEventListener('input', renderReforma);
+
+  renderKpis();
+  renderTabela();
+  renderReforma();
+})();
+</script>
+</body>
+</html>
